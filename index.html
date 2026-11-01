@@ -13,7 +13,8 @@ header{display:flex;justify-content:space-between;align-items:center;gap:16px;pa
 header strong{font-size:15px}header span{font-size:13px;color:#c4cbc5}
 #stage{position:relative;flex:1;min-height:240px;background:#000;display:flex;align-items:center;justify-content:center}
 #player{position:absolute;inset:0;width:100%;height:100%;border:0}
-#prompt{position:relative;z-index:1;text-align:center;padding:24px;background:#101311ed;border:1px solid #ffffff30;border-radius:16px;max-width:420px;margin:20px}
+#prompt{position:absolute;inset:auto 16px 64px;z-index:1;text-align:center;padding:16px;background:#101311ed;border:1px solid #ffffff30;border-radius:12px;max-width:520px;margin:auto;pointer-events:none}
+#prompt button{pointer-events:auto}
 #prompt p{line-height:1.5;color:#d6ddd7;margin:0 0 16px}
 button{min-height:46px;padding:10px 18px;border:1px solid #ffffff38;border-radius:8px;background:#242b25;color:#fff;font:inherit;cursor:pointer}
 button:hover{background:#354037}button:focus-visible,select:focus-visible{outline:3px solid #edb65d;outline-offset:3px}
@@ -33,7 +34,7 @@ footer{padding:16px 24px 20px;background:#101311}
 <main id="induction">
   <header><strong>Al Hosn Festival 2027</strong><span>English · HSE induction</span></header>
   <section id="stage" aria-label="English induction video">
-    <iframe id="player" title="Al Hosn Festival 2027 English health and safety induction" src="https://player.vimeo.com/video/1241982436?autoplay=1&amp;muted=0&amp;quality=1080p&amp;controls=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <iframe id="player" title="Al Hosn Festival 2027 English health and safety induction" src="https://player.vimeo.com/video/1241982436?autoplay=0&amp;muted=0&amp;quality=1080p&amp;controls=1&amp;progress_bar=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
     <div id="prompt"><p id="prompt-text">Loading your English induction…</p><button id="start" hidden>Play induction</button><button id="retry" hidden>Reload player</button></div>
   </section>
   <footer>
@@ -69,7 +70,7 @@ const FORM_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=iXCtc
 const STORAGE_KEY = 'ahf27_vimeo_1241982436_progress';
 const el = id => document.getElementById(id);
 let player, ready = false, playing = false, muted = false, correcting = false, completed = false;
-let maxWatched = 0, duration = 0, lastSeconds = 0, lastTick = performance.now();
+let maxWatched = 0, duration = 0, lastSeconds = 0, lastTick = performance.now(), startupTimer;
 function clock(seconds){
   const value = Math.max(0, Math.floor(seconds));
   return Math.floor(value / 60) + ':' + String(value % 60).padStart(2, '0');
@@ -94,7 +95,12 @@ async function correctSeek(){
 }
 async function play(){
   if (!ready || completed) return;
-  try { await player.play(); el('prompt').hidden = true; }
+  clearTimeout(startupTimer);
+  prompt('Starting your induction video…', false);
+  startupTimer = setTimeout(() => {
+    if (!completed && !el('prompt').hidden) prompt('Playback has not started. Press Play induction, or use the Play button in the video.');
+  }, 12000);
+  try { await player.play(); }
   catch (_) { prompt('Press Play induction to start the video with sound.'); }
 }
 el('start').addEventListener('click', play);
@@ -138,6 +144,7 @@ function updateProgress(data){
   if (playing && data.seconds > maxWatched) { maxWatched = data.seconds; saveProgress(); }
   lastSeconds = data.seconds;
   lastTick = now;
+  if (playing && data.seconds > 0) { clearTimeout(startupTimer); el('prompt').hidden = true; }
   el('progress').value = duration ? Math.min(100, data.seconds / duration * 100) : 0;
   el('time').textContent = clock(data.seconds) + ' / ' + clock(duration);
 }
@@ -161,7 +168,10 @@ async function initialise(){
   const loadTimer = setTimeout(() => {
     if (!ready) prompt('The video is taking longer to load. Check your connection or reload this page.', false);
   }, 20000);
-  player.on('play', () => { playing = true; lastTick = performance.now(); el('toggle').textContent = 'Pause'; el('prompt').hidden = true; });
+  player.on('play', () => { playing = true; lastTick = performance.now(); el('toggle').textContent = 'Pause'; });
+  player.on('playing', () => { playing = true; clearTimeout(startupTimer); el('prompt').hidden = true; });
+  player.on('bufferstart', () => { status('Buffering the video…'); });
+  player.on('bufferend', () => { status('The completion form opens after the full video finishes.'); });
   player.on('pause', () => { playing = false; el('toggle').textContent = 'Play'; });
   player.on('timeupdate', updateProgress);
   player.on('seeking', data => { if (ready && data.seconds > maxWatched + 0.5) void correctSeek(); });
