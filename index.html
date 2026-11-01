@@ -3,539 +3,200 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Watch the Video</title>
-
+<meta name="theme-color" content="#101311">
+<title>Al Hosn Festival 2027 | English HSE Induction</title>
 <style>
-body{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  margin:0;
-  text-align:center;
-  background:#000;
-  overflow:hidden;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-}
-
-#background,#overlay-permanent,#overlay-paused{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-}
-
-#background{z-index:1;}
-#overlay-permanent{background:transparent;z-index:4;}
-#overlay-paused{display:none;background:transparent;z-index:5;}
-
-#content{
-  position:relative;
-  z-index:2;
-  width:100%;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  padding:10px;
-  box-sizing:border-box;
-}
-
-#player{
-  width:100%;
-  height:100%;
-  max-width:100%;
-  max-height:100%;
-  border:none;
-  z-index:3;
-}
-
-/* cover to hide youtube flash */
-#player-cover{
-  position:absolute;
-  inset:0;
-  background:#000;
-  z-index:4;
-  opacity:1;
-  transition:opacity 0.8s ease;
-  pointer-events:none;
-}
-#player-cover.hidden{ opacity:0; }
-
-/* youtube recommendation mask */
-#youtube-mask{
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:0;
-  height:260px;
-  background:#000;
-  display:none;
-  z-index:5;
-  pointer-events:none;
-}
-
-/* header badge (top right) */
-#brand-chip{
-  position:absolute;
-  top: clamp(12px, 2vh, 22px);
-  right: clamp(12px, 2vw, 22px);
-  z-index:8;
-  pointer-events:none;
-  padding:10px 14px;
-  border-radius:999px;
-  background:rgba(0,0,0,0.55);
-  border:1px solid rgba(255,140,0,0.55);
-  color:#fff;
-  font-size:14px;
-  letter-spacing:0.2px;
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
-}
-
-/* dot moved to the right */
-#brand-chip span{
-  display:inline-block;
-  width:10px;
-  height:10px;
-  margin-left:10px;
-  border-radius:50%;
-  background:#ff8c00;
-  vertical-align:middle;
-}
-
-/* tap hint (top right under badge) */
-#tap-hint{
-  position:absolute;
-  top: clamp(54px, 8vh, 86px);
-  right: clamp(12px, 2vw, 22px);
-  z-index:8;
-  pointer-events:none;
-  padding:8px 12px;
-  border-radius:10px;
-  background:rgba(0,0,0,0.55);
-  border:1px solid rgba(255,255,255,0.15);
-  color:rgba(255,255,255,0.9);
-  font-size:13px;
-  opacity:0;
-  transform:translateY(-4px);
-  transition:opacity 0.4s ease, transform 0.4s ease;
-}
-#tap-hint.visible{
-  opacity:1;
-  transform:translateY(0);
-}
-
-/* fade overlay (hardened + ease-out) */
-#fade-overlay{
-  position:absolute;
-  inset:0;
-  background:#000;
-  opacity:0;
-  pointer-events:none;
-  z-index:9999;
-  transition:opacity 2s ease-out;
-}
-#fade-overlay.visible{ opacity:1; }
-
-/* warning message */
-#skip-warning{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:rgba(0,0,0,0.85);
-  color:#ffffff;
-  padding:18px 28px;
-  border-radius:8px;
-  font-size:18px;
-  z-index:9;
-  border:2px solid #ff8c00;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity 0.4s ease;
-}
-#skip-warning.visible{ opacity:1; }
-
-/* progress bar */
-#progress-container{
-  position:absolute;
-  left: clamp(12px, 2vw, 24px);
-  right: clamp(12px, 2vw, 24px);
-  bottom: clamp(10px, 1.6vh, 18px);
-  height:4px;
-  border-radius:999px;
-  background: rgba(255,140,0,0.25);
-  z-index:6;
-  pointer-events:none;
-  overflow:hidden;
-}
-
-@keyframes progressGlow{
-  0%{box-shadow:0 0 2px rgba(255,140,0,0.4);}
-  50%{box-shadow:0 0 8px rgba(255,140,0,0.9);}
-  100%{box-shadow:0 0 2px rgba(255,140,0,0.4);}
-}
-
-#progress-bar{
-  height:100%;
-  width:0%;
-  background:#ff8c00;
-  border-radius:999px;
-  transform-origin:left center;
-  transition:width 0.1s linear;
-  animation:progressGlow 2.2s infinite;
-}
-
-/* pause pulse (enhanced glow) */
-@keyframes pausePulse{
-  0%{
-    opacity:0.65;
-    box-shadow:0 0 4px rgba(255,140,0,0.4);
-  }
-  50%{
-    opacity:1;
-    box-shadow:0 0 14px rgba(255,140,0,1);
-  }
-  100%{
-    opacity:0.65;
-    box-shadow:0 0 4px rgba(255,140,0,0.4);
-  }
-}
-
-.paused-progress{
-  animation: pausePulse 1.2s infinite;
-  box-shadow:0 0 10px rgba(255,140,0,0.9);
-}
-
-/* play/pause button */
-.button{
-  font-size:200%;
-  position:absolute;
-  bottom:20px;
-  left:clamp(30px,4vw,60px);
-  height:1.3em;
-  width:1.3em;
-  padding:.3em;
-  border-radius:50%;
-  cursor:pointer;
-  z-index:7;
-  opacity:1;
-  background:rgba(255,255,255,0.15);
-  border:2px solid rgba(255,255,255,0.9);
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
-  box-shadow:0 0 12px rgba(0,0,0,0.6);
-  transition:all 0.25s ease;
-}
-
-.button.hidden{
-  opacity:0;
-  pointer-events:none;
-}
-
-/* Base icon anchoring: always centered (prevents jump) */
-.button:before{
-  content:"";
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  transition:all 0.25s ease;
-}
-
-/* play pulses gently */
-@keyframes playPulse{
-  0%{ transform:scale(1); box-shadow:0 0 10px rgba(255,255,255,0.4); }
-  50%{ transform:scale(1.08); box-shadow:0 0 18px rgba(255,255,255,0.8); }
-  100%{ transform:scale(1); box-shadow:0 0 10px rgba(255,255,255,0.4); }
-}
-
-/* PLAY: white background + green triangle */
-.play{
-  background:#ffffff;
-  border-color:#ffffff;
-  animation:playPulse 2.2s infinite ease-in-out;
-}
-
-/* Triangle: centered and nudged slightly to look optically centered */
-.play:before{
-  transform:translate(-45%,-50%);
-  border:.55em solid transparent;
-  border-right-width:0;
-  border-left:.9em solid #1db954;
-  height:0;
-  width:0;
-}
-
-/* PAUSED: red pause bars (no pulse) */
-.paused{
-  border-radius:14%;
-  border-color:#ff3b30;
-  background:rgba(0,0,0,0.35);
-  animation:none;
-}
-
-.paused:before{
-  transform:translate(-50%,-50%);
-  border-width:0;
-  border-left:.35em solid #ff3b30;
-  border-right:.35em solid #ff3b30;
-  height:1.05em;
-  width:.25em;
-}
-
-/* When paused, move button into middle of black ribbon */
-.button.in-mask{
-  left:50%;
-  transform:translate(-50%,0);
-  bottom:140px;
-}
-
-@media screen and (max-width:768px){
-  .button{
-    bottom:calc(20px - 1%);
-    left:clamp(28px,6vw,50px);
-    width:30px;
-    height:30px;
-    font-size:185%;
-    padding:.25em;
-  }
-
-  #progress-container{
-    left: clamp(10px, 3vw, 18px);
-    right: clamp(10px, 3vw, 18px);
-    bottom: clamp(8px, 1.4vh, 14px);
-    height:4px;
-  }
-
-  #youtube-mask{ height:320px; }
-
-  /* Centered in the larger mobile ribbon */
-  .button.in-mask{
-    bottom:180px;
-  }
-}
+*{box-sizing:border-box}
+body{margin:0;background:#101311;color:#f6f6f2;font-family:Arial,sans-serif}
+main{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 24px;border-bottom:1px solid #ffffff20}
+header strong{font-size:15px}header span{font-size:13px;color:#c4cbc5}
+#stage{position:relative;flex:1;min-height:240px;background:#000;display:flex;align-items:center;justify-content:center}
+#player{position:absolute;inset:0;width:100%;height:100%;border:0}
+#prompt{position:relative;z-index:1;text-align:center;padding:24px;background:#101311ed;border:1px solid #ffffff30;border-radius:16px;max-width:420px;margin:20px}
+#prompt p{line-height:1.5;color:#d6ddd7;margin:0 0 16px}
+button{min-height:46px;padding:10px 18px;border:1px solid #ffffff38;border-radius:8px;background:#242b25;color:#fff;font:inherit;cursor:pointer}
+button:hover{background:#354037}button:focus-visible,select:focus-visible{outline:3px solid #edb65d;outline-offset:3px}
+button:disabled{opacity:.5;cursor:wait}
+#start{background:#edb65d;color:#181d19;border:0;font-weight:bold}
+[hidden]{display:none!important}
+footer{padding:16px 24px 20px;background:#101311}
+#progress{width:100%;height:5px;display:block;accent-color:#edb65d;margin:0 0 14px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#time{font-size:14px;color:#c4cbc5;font-variant-numeric:tabular-nums;margin-inline:4px auto}
+#status{font-size:13px;color:#c4cbc5;line-height:1.5;margin:12px 0 0;min-height:20px}
+#captions{min-height:46px;max-width:160px;border:1px solid #ffffff38;border-radius:8px;background:#242b25;color:white;font:inherit;padding:8px}
+@media(max-width:600px){header{padding:14px 16px}header span{max-width:130px;text-align:right}footer{padding:12px 16px 16px}.toolbar{gap:8px}button{padding:10px 12px}#time{font-size:12px}#stage{min-height:220px}}
 </style>
 </head>
-
 <body>
-<div id="background"></div>
-
-<div id="content">
-  <div id="player"></div>
-
-  <div id="player-cover"></div>
-  <div id="youtube-mask"></div>
-
-  <div id="brand-chip">Health and Safety Induction<span></span></div>
-  <div id="tap-hint">Tap anywhere to show controls</div>
-
-  <div id="overlay-permanent"></div>
-  <div id="overlay-paused"></div>
-
-  <div id="skip-warning">You must watch the entire video before you can submit your details</div>
-
-  <div id="progress-container"><div id="progress-bar"></div></div>
-  <div class="button play" aria-label="Play/Pause Button"></div>
-
-  <div id="fade-overlay"></div>
-</div>
-
+<main id="induction">
+  <header><strong>Al Hosn Festival 2027</strong><span>English · HSE induction</span></header>
+  <section id="stage" aria-label="English induction video">
+    <iframe id="player" title="Al Hosn Festival 2027 English health and safety induction" src="https://player.vimeo.com/video/1241982436?autoplay=1&amp;muted=0&amp;quality=1080p&amp;controls=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <div id="prompt"><p id="prompt-text">Loading your English induction…</p><button id="start" hidden>Play induction</button></div>
+  </section>
+  <footer>
+    <progress id="progress" max="100" value="0" aria-label="Video progress"></progress>
+    <div class="toolbar">
+      <button id="toggle" disabled>Play</button>
+      <button id="sound" disabled>Mute</button>
+      <span id="time">0:00 / --:--</span>
+      <select id="captions" aria-label="Captions" hidden></select>
+      <button id="fullscreen">Fullscreen</button>
+    </div>
+    <p id="status" role="status" aria-live="polite">The completion form opens after the full video finishes.</p>
+  </footer>
+</main>
+<noscript>This induction needs JavaScript enabled to play the video and open the completion form.</noscript>
 <script>
-var player;
-var hideTimer;
-var progressBarEl;
-var progressRafId;
-
-var maxWatchedTime = 0;
-var STORAGE_KEY = "videoProgress_Q_INw6DtUKw";
-var fadeTriggered = false;
-var videoCompleted = false;
-
-function showControls(){
-  const button = document.querySelector('.button');
-  button.classList.remove('hidden');
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(()=>{ button.classList.add('hidden'); }, 3000);
+'use strict';
+const FORM_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=iXCtcye7ykC0WzyCSnBHASHAGHxqVudJkZcqKzBkScNURVc1MUdMMVJONU1BT0tJWDY5MEFLSkdHQyQlQCN0PWcu';
+const STORAGE_KEY = 'ahf27_vimeo_1241982436_progress';
+const el = id => document.getElementById(id);
+let player, ready = false, playing = false, muted = false, correcting = false, completed = false;
+let maxWatched = 0, duration = 0, lastSeconds = 0, lastTick = performance.now();
+function clock(seconds){
+  const value = Math.max(0, Math.floor(seconds));
+  return Math.floor(value / 60) + ':' + String(value % 60).padStart(2, '0');
 }
-
-function showWarning(){
-  var warning = document.getElementById("skip-warning");
-  warning.classList.add("visible");
-  setTimeout(function(){ warning.classList.remove("visible"); }, 2000);
+function prompt(message, showButton = true){
+  el('prompt-text').textContent = message;
+  el('prompt').hidden = false;
+  el('start').hidden = !showButton;
 }
-
-function showTapHint(){
-  var hint = document.getElementById("tap-hint");
-  hint.classList.add("visible");
-  setTimeout(function(){ hint.classList.remove("visible"); }, 2200);
+function status(message){ el('status').textContent = message; }
+function saveProgress(){
+  try { localStorage.setItem(STORAGE_KEY, String(maxWatched)); } catch (_) {}
 }
-
-function checkForEnding(){
-  if (!player || typeof player.getDuration !== 'function') return;
-
-  var duration = player.getDuration() || 0;
-  var current = player.getCurrentTime ? player.getCurrentTime() : 0;
-
-  /* fade starts 2 seconds before end */
-  if (duration > 0 && (duration - current) <= 2 && !fadeTriggered){
-    fadeTriggered = true;
-    document.getElementById("fade-overlay").classList.add("visible");
-  }
+async function correctSeek(){
+  if (correcting || !ready) return;
+  correcting = true;
+  status('Please play the full video before submitting your details.');
+  try { lastSeconds = await player.setCurrentTime(maxWatched); }
+  catch (_) { status('Unable to restore playback. Please reload this page.'); }
+  finally { lastTick = performance.now(); correcting = false; }
 }
-
-function updateProgress(){
-  var duration = player.getDuration();
-  var current = player.getCurrentTime();
-
-  if (duration > 0){
-    var percent = (current/duration) * 100;
-    progressBarEl.style.width = percent + "%";
-
-    /* completion lock */
-    if (percent >= 98){
-      videoCompleted = true;
-    }
-  }
-
-  checkForEnding();
-  progressRafId = requestAnimationFrame(updateProgress);
+async function play(){
+  if (!ready || completed) return;
+  try { await player.play(); el('prompt').hidden = true; }
+  catch (_) { prompt('Press Play induction to start the video with sound.'); }
 }
-
-function enforceRules(){
-  var current = player.getCurrentTime();
-
-  /* block skipping forward */
-  if (current > maxWatchedTime + 1.5){
-    player.seekTo(maxWatchedTime, true);
-    showWarning();
-  }
-
-  if (current > maxWatchedTime){
-    maxWatchedTime = current;
-  }
-
-  localStorage.setItem(STORAGE_KEY, maxWatchedTime);
-
-  /* force 1x speed */
-  if (player.getPlaybackRate && player.getPlaybackRate() !== 1){
-    player.setPlaybackRate(1);
-  }
-
-  /* force unmute */
-  if (player.isMuted && player.isMuted()){
-    player.unMute();
-  }
-}
-
-function restoreProgress(){
-  var saved = parseFloat(localStorage.getItem(STORAGE_KEY));
-  if (saved && saved > 0){
-    player.seekTo(Math.max(0, saved - 0.25), true);
-    maxWatchedTime = saved;
-  }
-}
-
-function onYouTubeIframeAPIReady(){
-  player = new YT.Player('player', {
-    host: 'https://www.youtube-nocookie.com',
-    videoId:'Q_INw6DtUKw',
-    playerVars:{
-      autoplay:1,
-      controls:0,
-      mute:1,
-      playsinline:1,
-      rel:0,
-      modestbranding:1,
-      iv_load_policy:3,
-      disablekb:1,
-      fs:0,
-      origin:window.location.origin
-    },
-    events:{
-      onReady:onPlayerReady,
-      onStateChange:onPlayerStateChange
-    }
-  });
-}
-
-function onPlayerReady(event){
-  event.target.playVideo();
-  player.unMute();
-
-  restoreProgress();
-  showControls();
-  showTapHint();
-
-  progressBarEl = document.getElementById("progress-bar");
-  progressRafId = requestAnimationFrame(updateProgress);
-
-  setInterval(enforceRules, 500);
-}
-
-function onPlayerStateChange(event){
-  const btn = document.querySelector('.button');
-
-  if (event.data === YT.PlayerState.PLAYING){
-    document.getElementById("player-cover").classList.add("hidden");
-    document.getElementById("youtube-mask").style.display = "none";
-
-    btn.classList.remove('in-mask');
-    btn.classList.remove('play');
-    btn.classList.add('paused');
-
-    document.getElementById("progress-bar").classList.remove("paused-progress");
-    showControls();
-  }
-  else if (event.data === YT.PlayerState.PAUSED){
-    btn.classList.add('in-mask');
-    btn.classList.remove('paused');
-    btn.classList.add('play');
-
-    document.getElementById("progress-bar").classList.add("paused-progress");
-    document.getElementById("youtube-mask").style.display = "block";
-    showControls();
-  }
-  else if (event.data === YT.PlayerState.ENDED){
-    /* completion lock prevents last-second refresh bypass */
-    if (videoCompleted){
-      localStorage.removeItem(STORAGE_KEY);
-      window.location.href="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=iXCtcye7ykC0WzyCSnBHASHAGHxqVudJkZcqKzBkScNURVc1MUdMMVJONU1BT0tJWDY5MEFLSkdHQyQlQCN0PWcu";
-    }
-  }
-}
-
-document.querySelector('.button').addEventListener('click', function(e){
-  e.stopPropagation();
-  showControls();
-
-  if (this.classList.contains('play')){
-    player.playVideo();
-    this.classList.remove('play');
-    this.classList.add('paused');
-  } else {
-    player.pauseVideo();
-    this.classList.remove('paused');
-    this.classList.add('play');
-  }
+el('start').addEventListener('click', play);
+el('toggle').addEventListener('click', async () => {
+  if (!ready || completed) return;
+  if (!playing) return play();
+  try { await player.pause(); } catch (_) { status('Please try pausing again.'); }
 });
-
-document.getElementById('content').addEventListener('click', function(){
-  showControls();
+el('sound').addEventListener('click', async () => {
+  if (!ready) return;
+  try { await player.setMuted(!muted); }
+  catch (_) { status('Unable to change sound. Please check your device volume.'); }
 });
-
-document.addEventListener('DOMContentLoaded', function(){
-  var tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  var firstScriptTag = document.getElementsByTagName('script')[0];
-  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+el('fullscreen').addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (el('induction').requestFullscreen) await el('induction').requestFullscreen();
+    else if (ready) await player.requestFullscreen();
+  } catch (_) { status('Fullscreen is not available in this browser.'); }
 });
+document.addEventListener('fullscreenchange', () => {
+  el('fullscreen').textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+});
+el('captions').addEventListener('change', async event => {
+  try {
+    if (event.target.value) await player.enableTextTrack(event.target.value);
+    else await player.disableTextTrack();
+  } catch (_) { status('Unable to change captions. Please try again.'); }
+});
+function updateProgress(data){
+  if (!ready || completed || correcting) return;
+  const now = performance.now();
+  const elapsed = Math.max(0, (now - lastTick) / 1000);
+  duration = data.duration || duration;
+  // Browser deterrent only: this is not server-verified completion or identity.
+  if (data.seconds > maxWatched + Math.max(1.25, elapsed + 0.75) || (data.seconds - lastSeconds > elapsed + 0.75 && data.seconds > maxWatched)) {
+    void correctSeek();
+    return;
+  }
+  if (playing && data.seconds > maxWatched) { maxWatched = data.seconds; saveProgress(); }
+  lastSeconds = data.seconds;
+  lastTick = now;
+  el('progress').value = duration ? Math.min(100, data.seconds / duration * 100) : 0;
+  el('time').textContent = clock(data.seconds) + ' / ' + clock(duration);
+}
+async function finish(){
+  if (completed || correcting || !duration || maxWatched < duration - 1.25) {
+    if (!completed) { await correctSeek(); prompt('Please finish the full induction video.'); }
+    return;
+  }
+  completed = true;
+  playing = false;
+  el('toggle').disabled = true;
+  el('sound').disabled = true;
+  el('progress').value = 100;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  status('Induction video finished. Opening your completion form…');
+  window.location.replace(FORM_URL);
+}
+async function initialise(){
+  if (!window.Vimeo) { prompt('The video player could not load. Please check your connection and reload.', false); return; }
+  player = new Vimeo.Player(el('player'));
+  const loadTimer = setTimeout(() => {
+    if (!ready) prompt('The video is taking longer to load. Check your connection or reload this page.', false);
+  }, 20000);
+  player.on('play', () => { playing = true; lastTick = performance.now(); el('toggle').textContent = 'Pause'; el('prompt').hidden = true; });
+  player.on('pause', () => { playing = false; el('toggle').textContent = 'Play'; });
+  player.on('timeupdate', updateProgress);
+  player.on('seeking', data => { if (ready && data.seconds > maxWatched + 0.5) void correctSeek(); });
+  player.on('seeked', data => { lastSeconds = data.seconds; lastTick = performance.now(); });
+  player.on('playbackratechange', data => { if (data.playbackRate !== 1) player.setPlaybackRate(1).catch(() => { player.pause().catch(() => {}); status('Please use normal playback speed.'); }); });
+  player.on('volumechange', data => { muted = data.muted || data.volume === 0; el('sound').textContent = muted ? 'Unmute' : 'Mute'; });
+  player.on('ended', finish);
+  player.on('error', () => { prompt('The video could not play. Please reload, or contact the induction team if this continues.', false); });
+  try {
+    await player.ready();
+    clearTimeout(loadTimer);
+    duration = await player.getDuration();
+    try {
+      const saved = Number(localStorage.getItem(STORAGE_KEY));
+      if (Number.isFinite(saved) && saved > 0 && saved < duration - 2) {
+        maxWatched = saved;
+        lastSeconds = await player.setCurrentTime(Math.max(0, saved - 0.5));
+      }
+    } catch (_) {}
+    ready = true;
+    lastTick = performance.now();
+    el('toggle').disabled = false;
+    el('sound').disabled = false;
+    el('time').textContent = clock(lastSeconds) + ' / ' + clock(duration);
+    player.setQuality('1080p').catch(() => { status('1080p was requested; this device may use automatic quality.'); });
+    player.getMuted().then(value => { muted = value; el('sound').textContent = value ? 'Unmute' : 'Mute'; }).catch(() => {});
+    player.getTextTracks().then(tracks => {
+      if (!tracks.length) return;
+      el('captions').append(new Option('Captions off', ''));
+      tracks.forEach(track => el('captions').append(new Option(track.label || track.language, track.language)));
+      el('captions').hidden = false;
+    }).catch(() => {});
+    await play();
+  } catch (_) {
+    clearTimeout(loadTimer);
+    prompt('Unable to load this video. Please check your connection and Vimeo embedding permissions.', false);
+  }
+}
+if (window.Vimeo) {
+  void initialise();
+} else {
+  const sdk = document.createElement('script');
+  sdk.src = 'https://player.vimeo.com/api/player.js';
+  sdk.onload = initialise;
+  sdk.onerror = () => prompt('The video player could not load. Please check your connection and reload.', false);
+  document.head.append(sdk);
+  setTimeout(() => {
+    if (!window.Vimeo) prompt('The video player is taking longer to load. Please check your connection and reload.', false);
+  }, 20000);
+}
 </script>
-
 </body>
 </html>
+
