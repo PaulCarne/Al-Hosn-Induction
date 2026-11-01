@@ -41,7 +41,6 @@ footer{padding:16px 24px 20px;background:#101311}
     <progress id="progress" max="100" value="0" aria-label="Video progress"></progress>
     <div class="toolbar">
       <button id="toggle" disabled>Play</button>
-      <button id="sound" disabled>Mute</button>
       <span id="time">0:00 / --:--</span>
       <select id="captions" aria-label="Captions" hidden></select>
       <button id="fullscreen">Fullscreen</button>
@@ -69,7 +68,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 const FORM_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=iXCtcye7ykC0WzyCSnBHASHAGHxqVudJkZcqKzBkScNURVc1MUdMMVJONU1BT0tJWDY5MEFLSkdHQyQlQCN0PWcu';
 const STORAGE_KEY = 'ahf27_vimeo_1241982436_progress';
 const el = id => document.getElementById(id);
-let player, ready = false, playing = false, muted = false, correcting = false, completed = false;
+let player, ready = false, playing = false, correcting = false, completed = false;
 let maxWatched = 0, duration = 0, lastSeconds = 0, lastTick = performance.now(), startupTimer;
 function clock(seconds){
   const value = Math.max(0, Math.floor(seconds));
@@ -93,27 +92,32 @@ async function correctSeek(){
   catch (_) { status('Unable to restore playback. Please reload this page.'); }
   finally { lastTick = performance.now(); correcting = false; }
 }
-async function play(){
+async function play(withSound = false){
   if (!ready || completed) return;
   clearTimeout(startupTimer);
   prompt('Starting your induction video…', false);
   startupTimer = setTimeout(() => {
     if (!completed && !el('prompt').hidden) prompt('Playback has not started. Press Play induction to try again.');
   }, 12000);
-  try { await player.play(); }
+  try {
+    if (withSound) {
+      await player.setMuted(false);
+      await player.setVolume(1).catch(() => {});
+    }
+    await player.play();
+    if (await player.getMuted()) {
+      await player.pause();
+      prompt('Press Play induction to start the video with sound.');
+    }
+  }
   catch (_) { prompt('Press Play induction to start the video with sound.'); }
 }
-el('start').addEventListener('click', play);
+el('start').addEventListener('click', () => play(true));
 el('retry').addEventListener('click', () => window.location.reload());
 el('toggle').addEventListener('click', async () => {
   if (!ready || completed) return;
-  if (!playing) return play();
+  if (!playing) return play(true);
   try { await player.pause(); } catch (_) { status('Please try pausing again.'); }
-});
-el('sound').addEventListener('click', async () => {
-  if (!ready) return;
-  try { await player.setMuted(!muted); }
-  catch (_) { status('Unable to change sound. Please check your device volume.'); }
 });
 el('fullscreen').addEventListener('click', async () => {
   try {
@@ -156,7 +160,6 @@ async function finish(){
   completed = true;
   playing = false;
   el('toggle').disabled = true;
-  el('sound').disabled = true;
   el('progress').value = 100;
   try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
   status('Induction video finished. Opening your completion form…');
@@ -177,7 +180,6 @@ async function initialise(){
   player.on('seeking', data => { if (ready && data.seconds > maxWatched + 0.5) void correctSeek(); });
   player.on('seeked', data => { lastSeconds = data.seconds; lastTick = performance.now(); });
   player.on('playbackratechange', data => { if (data.playbackRate !== 1) player.setPlaybackRate(1).catch(() => { player.pause().catch(() => {}); status('Please use normal playback speed.'); }); });
-  player.on('volumechange', data => { muted = data.muted || data.volume === 0; el('sound').textContent = muted ? 'Unmute' : 'Mute'; });
   player.on('ended', finish);
   player.on('error', () => { prompt('The video could not play. Please reload, or contact the induction team if this continues.', false); });
   try {
@@ -189,7 +191,6 @@ async function initialise(){
     try { savedProgress = Number(localStorage.getItem(STORAGE_KEY)); } catch (_) {}
     ready = true;
     el('toggle').disabled = false;
-    el('sound').disabled = false;
     const initialPlayback = play();
     duration = await player.getDuration();
     try {
@@ -202,10 +203,8 @@ async function initialise(){
     ready = true;
     lastTick = performance.now();
     el('toggle').disabled = false;
-    el('sound').disabled = false;
     el('time').textContent = clock(lastSeconds) + ' / ' + clock(duration);
     player.setQuality('1080p').catch(() => { status('1080p was requested; this device may use automatic quality.'); });
-    player.getMuted().then(value => { muted = value; el('sound').textContent = value ? 'Unmute' : 'Mute'; }).catch(() => {});
     player.getTextTracks().then(tracks => {
       if (!tracks.length) return;
       el('captions').append(new Option('Captions off', ''));
