@@ -34,7 +34,7 @@ footer{padding:16px 24px 20px;background:#101311}
 <main id="induction">
   <header><strong>Al Hosn Festival 2027</strong><span>English · HSE induction</span></header>
   <section id="stage" aria-label="English induction video">
-    <iframe id="player" title="Al Hosn Festival 2027 English health and safety induction" src="https://player.vimeo.com/video/1241982436?autoplay=0&amp;muted=0&amp;quality=1080p&amp;controls=1&amp;progress_bar=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <iframe id="player" title="Al Hosn Festival 2027 English health and safety induction" src="https://player.vimeo.com/video/1241982436?autoplay=0&amp;muted=0&amp;quality=1080p&amp;controls=0&amp;progress_bar=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
     <div id="prompt"><p id="prompt-text">Loading your English induction…</p><button id="start" hidden>Play induction</button><button id="retry" hidden>Reload player</button></div>
   </section>
   <footer>
@@ -98,7 +98,7 @@ async function play(){
   clearTimeout(startupTimer);
   prompt('Starting your induction video…', false);
   startupTimer = setTimeout(() => {
-    if (!completed && !el('prompt').hidden) prompt('Playback has not started. Press Play induction, or use the Play button in the video.');
+    if (!completed && !el('prompt').hidden) prompt('Playback has not started. Press Play induction to try again.');
   }, 12000);
   try { await player.play(); }
   catch (_) { prompt('Press Play induction to start the video with sound.'); }
@@ -183,9 +183,17 @@ async function initialise(){
   try {
     await player.ready();
     clearTimeout(loadTimer);
+    // Enable our Play control before waiting for metadata: some browsers only
+    // load the duration after playback is requested when Vimeo controls are hidden.
+    let savedProgress = 0;
+    try { savedProgress = Number(localStorage.getItem(STORAGE_KEY)); } catch (_) {}
+    ready = true;
+    el('toggle').disabled = false;
+    el('sound').disabled = false;
+    const initialPlayback = play();
     duration = await player.getDuration();
     try {
-      const saved = Number(localStorage.getItem(STORAGE_KEY));
+      const saved = savedProgress;
       if (Number.isFinite(saved) && saved > 0 && saved < duration - 2) {
         maxWatched = saved;
         lastSeconds = await player.setCurrentTime(Math.max(0, saved - 0.5));
@@ -204,7 +212,7 @@ async function initialise(){
       tracks.forEach(track => el('captions').append(new Option(track.label || track.language, track.language)));
       el('captions').hidden = false;
     }).catch(() => {});
-    await play();
+    await initialPlayback;
   } catch (_) {
     clearTimeout(loadTimer);
     prompt('Unable to load this video. Please check your connection and Vimeo embedding permissions.', false);
