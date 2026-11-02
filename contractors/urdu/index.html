@@ -1,1 +1,195 @@
-
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101311">
+<title>الحصن فیسٹیول 2027 | اردو صحت و سلامتی کا تعارف – ٹھیکیداروں کی گروپ اسکریننگ</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101311;color:#f6f6f2;font-family:"Noto Nastaliq Urdu","Noto Sans Arabic",Arial,sans-serif}
+main{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 24px;border-bottom:1px solid #ffffff20}
+header strong{font-size:15px}header span{font-size:13px;color:#c4cbc5}
+#stage{position:relative;flex:1;min-height:240px;background:#000;display:flex;align-items:center;justify-content:center}
+#player{position:absolute;inset:0;width:100%;height:100%;border:0}
+#prompt{position:absolute;inset:auto 16px 64px;z-index:1;text-align:center;padding:16px;background:#101311ed;border:1px solid #ffffff30;border-radius:12px;max-width:520px;margin:auto;pointer-events:none}
+#prompt button{pointer-events:auto}
+#prompt p{line-height:1.8;color:#d6ddd7;margin:0 0 16px}
+button{min-height:46px;padding:10px 18px;border:1px solid #ffffff38;border-radius:8px;background:#242b25;color:#fff;font:inherit;cursor:pointer}
+button:hover{background:#354037}button:focus-visible,select:focus-visible{outline:3px solid #edb65d;outline-offset:3px}
+button:disabled{opacity:.5;cursor:wait}
+#start{background:#edb65d;color:#181d19;border:0;font-weight:bold}
+[hidden]{display:none!important}
+footer{padding:16px 24px 20px;background:#101311}
+#progress{width:100%;height:5px;display:block;accent-color:#edb65d;margin:0 0 14px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#time{direction:ltr;unicode-bidi:isolate;font-size:14px;color:#c4cbc5;font-variant-numeric:tabular-nums;margin-inline:4px auto}
+#status{font-size:13px;color:#c4cbc5;line-height:1.8;margin:12px 0 0;min-height:20px}
+#captions{min-height:46px;max-width:160px;border:1px solid #ffffff38;border-radius:8px;background:#242b25;color:white;font:inherit;padding:8px}
+@media(max-width:600px){header{padding:14px 16px}header span{max-width:170px;text-align:left}footer{padding:12px 16px 16px}.toolbar{gap:8px}button{padding:10px 12px}#time{font-size:12px}#stage{min-height:220px}}
+</style>
+</head>
+<body>
+<main id="induction">
+  <header><strong>الحصن فیسٹیول 2027</strong><span>اردو · ٹھیکیداروں کی گروپ اسکریننگ</span></header>
+  <section id="stage" aria-label="اردو میں صحت و سلامتی کی تعارفی ویڈیو">
+    <iframe id="player" title="الحصن فیسٹیول 2027 کی اردو صحت و سلامتی کی تعارفی ویڈیو" src="https://player.vimeo.com/video/1242304776?autoplay=0&amp;muted=0&amp;quality=1080p&amp;controls=0&amp;progress_bar=0&amp;keyboard=0&amp;skipping_forward=0&amp;speed=0&amp;pip=0&amp;title=0&amp;byline=0&amp;portrait=0&amp;vimeo_logo=0&amp;loop=0&amp;playsinline=1&amp;dnt=1" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <div id="prompt"><p id="prompt-text">اردو تعارفی ویڈیو لوڈ ہو رہی ہے…</p><button id="start" hidden>تعارفی ویڈیو چلائیں</button><button id="retry" hidden>پلیئر دوبارہ لوڈ کریں</button></div>
+  </section>
+  <footer>
+    <progress id="progress" max="100" value="0" aria-label="ویڈیو کی پیش رفت"></progress>
+    <div class="toolbar">
+      <button id="toggle" disabled>چلائیں</button>
+      <span id="time">0:00 / --:--</span>
+      <select id="captions" aria-label="سب ٹائٹلز" hidden></select>
+      <button id="fullscreen">مکمل اسکرین</button>
+    </div>
+    <p id="status" role="status" aria-live="polite">ٹھیکیداروں کی گروپ اسکریننگ · حاضری کو ٹھیکیدار کے اقرار نامے اور عملے کی فہرست میں درج کریں۔</p>
+  </footer>
+</main>
+<noscript>ویڈیو چلانے کے لیے JavaScript فعال ہونا ضروری ہے۔</noscript>
+<script src="https://player.vimeo.com/api/player.js"></script>
+<script>
+'use strict';
+const el = id => document.getElementById(id);
+let player, ready = false, playing = false, correcting = false, completed = false;
+let maxWatched = 0, duration = 0, lastSeconds = 0, lastTick = performance.now(), startupTimer;
+function clock(seconds){
+  const value = Math.max(0, Math.floor(seconds));
+  return Math.floor(value / 60) + ':' + String(value % 60).padStart(2, '0');
+}
+function prompt(message, showButton = true){
+  el('prompt-text').textContent = message;
+  el('prompt').hidden = false;
+  el('start').hidden = !showButton;
+  el('retry').hidden = showButton;
+}
+function status(message){ el('status').textContent = message; }
+async function correctSeek(){
+  if (correcting || !ready) return;
+  correcting = true;
+  status('براہِ کرم پوری ویڈیو دیکھیں۔');
+  try { lastSeconds = await player.setCurrentTime(maxWatched); }
+  catch (_) { status('ویڈیو کو پچھلی جگہ سے چلانا ممکن نہیں۔ براہِ کرم صفحہ دوبارہ لوڈ کریں۔'); }
+  finally { lastTick = performance.now(); correcting = false; }
+}
+async function play(withSound = false){
+  if (!ready || completed) return;
+  clearTimeout(startupTimer);
+  prompt('آپ کی تعارفی ویڈیو شروع ہو رہی ہے…', false);
+  startupTimer = setTimeout(() => {
+    if (!completed && !el('prompt').hidden) prompt('ویڈیو شروع نہیں ہوئی۔ دوبارہ کوشش کرنے کے لیے تعارفی ویڈیو چلائیں دبائیں۔');
+  }, 12000);
+  try {
+    if (withSound) {
+      await player.setMuted(false);
+      await player.setVolume(1).catch(() => {});
+    }
+    await player.play();
+    if (await player.getMuted()) {
+      await player.pause();
+      prompt('آواز کے ساتھ ویڈیو شروع کرنے کے لیے تعارفی ویڈیو چلائیں دبائیں۔');
+    }
+  }
+  catch (_) { prompt('آواز کے ساتھ ویڈیو شروع کرنے کے لیے تعارفی ویڈیو چلائیں دبائیں۔'); }
+}
+el('start').addEventListener('click', () => play(true));
+el('retry').addEventListener('click', () => window.location.reload());
+el('toggle').addEventListener('click', async () => {
+  if (!ready) return;
+  if (completed) {
+    completed = false; maxWatched = 0; lastSeconds = 0;
+    await player.setCurrentTime(0);
+    status('ٹھیکیداروں کی گروپ اسکریننگ · حاضری کو ٹھیکیدار کے اقرار نامے اور عملے کی فہرست میں درج کریں۔');
+  }
+  if (!playing) return play(true);
+  try { await player.pause(); } catch (_) { status('براہِ کرم ویڈیو کو دوبارہ روکنے کی کوشش کریں۔'); }
+});
+el('fullscreen').addEventListener('click', async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (el('induction').requestFullscreen) await el('induction').requestFullscreen();
+    else if (ready) await player.requestFullscreen();
+  } catch (_) { status('اس براؤزر میں مکمل اسکرین دستیاب نہیں ہے۔'); }
+});
+document.addEventListener('fullscreenchange', () => {
+  el('fullscreen').textContent = document.fullscreenElement ? 'مکمل اسکرین سے باہر نکلیں' : 'مکمل اسکرین';
+});
+el('captions').addEventListener('change', async event => {
+  try {
+    if (event.target.value) await player.enableTextTrack(event.target.value);
+    else await player.disableTextTrack();
+  } catch (_) { status('سب ٹائٹلز تبدیل نہیں ہو سکے۔ براہِ کرم دوبارہ کوشش کریں۔'); }
+});
+function updateProgress(data){
+  if (!ready || completed || correcting) return;
+  const now = performance.now();
+  const elapsed = Math.max(0, (now - lastTick) / 1000);
+  duration = data.duration || duration;
+  if (data.seconds > maxWatched + Math.max(1.25, elapsed + 0.75) || (data.seconds - lastSeconds > elapsed + 0.75 && data.seconds > maxWatched)) {
+    void correctSeek();
+    return;
+  }
+  if (playing && data.seconds > maxWatched) maxWatched = data.seconds;
+  lastSeconds = data.seconds;
+  lastTick = now;
+  if (playing && data.seconds > 0) { clearTimeout(startupTimer); el('prompt').hidden = true; }
+  el('progress').value = duration ? Math.min(100, data.seconds / duration * 100) : 0;
+  el('time').textContent = clock(data.seconds) + ' / ' + clock(duration);
+}
+async function finish(){
+  if (completed || correcting || !duration || maxWatched < duration - 1.25) {
+    if (!completed) { await correctSeek(); prompt('براہِ کرم پوری تعارفی ویڈیو مکمل کریں۔'); }
+    return;
+  }
+  completed = true;
+  playing = false;
+  el('toggle').disabled = false;
+  el('toggle').textContent = 'دوبارہ چلائیں';
+  el('progress').value = 100;
+  status('ویڈیو مکمل ہو گئی۔ براہِ کرم ٹھیکیدار کا اقرار نامہ اور ویڈیو دیکھنے والے تمام عملے کی فہرست مکمل کریں۔');
+}
+async function initialise(){
+  if (!window.Vimeo) { prompt('ویڈیو پلیئر لوڈ نہیں ہو سکا۔ اپنا انٹرنیٹ کنکشن چیک کرکے صفحہ دوبارہ لوڈ کریں۔', false); return; }
+  player = new Vimeo.Player(el('player'));
+  const loadTimer = setTimeout(() => {
+    if (!ready) prompt('ویڈیو لوڈ ہونے میں زیادہ وقت لگ رہا ہے۔ اپنا کنکشن چیک کریں یا صفحہ دوبارہ لوڈ کریں۔', false);
+  }, 20000);
+  player.on('play', () => { playing = true; lastTick = performance.now(); el('toggle').textContent = 'روکیں'; });
+  player.on('playing', () => { playing = true; clearTimeout(startupTimer); el('prompt').hidden = true; });
+  player.on('bufferstart', () => { status('ویڈیو لوڈ ہو رہی ہے…'); });
+  player.on('bufferend', () => { status('ٹھیکیداروں کی گروپ اسکریننگ · حاضری کو ٹھیکیدار کے اقرار نامے اور عملے کی فہرست میں درج کریں۔'); });
+  player.on('pause', () => { playing = false; el('toggle').textContent = 'چلائیں'; });
+  player.on('timeupdate', updateProgress);
+  player.on('seeking', data => { if (ready && data.seconds > maxWatched + 0.5) void correctSeek(); });
+  player.on('seeked', data => { lastSeconds = data.seconds; lastTick = performance.now(); });
+  player.on('playbackratechange', data => { if (data.playbackRate !== 1) player.setPlaybackRate(1).catch(() => { player.pause().catch(() => {}); status('براہِ کرم ویڈیو کو معمول کی رفتار سے چلائیں۔'); }); });
+  player.on('ended', finish);
+  player.on('error', () => { prompt('ویڈیو نہیں چل سکی۔ صفحہ دوبارہ لوڈ کریں یا مسئلہ برقرار رہنے کی صورت میں تعارفی ٹیم سے رابطہ کریں۔', false); });
+  try {
+    await player.ready();
+    clearTimeout(loadTimer);
+    ready = true;
+    el('toggle').disabled = false;
+    const initialPlayback = play();
+    duration = await player.getDuration();
+    lastTick = performance.now();
+    el('time').textContent = clock(lastSeconds) + ' / ' + clock(duration);
+    player.setQuality('1080p').catch(() => { status('1080p معیار کی درخواست کی گئی ہے؛ یہ آلہ خودکار معیار استعمال کر سکتا ہے۔'); });
+    player.getTextTracks().then(tracks => {
+      if (!tracks.length) return;
+      el('captions').append(new Option('سب ٹائٹلز بند', ''));
+      tracks.forEach(track => el('captions').append(new Option(track.label || track.language, track.language)));
+      el('captions').hidden = false;
+    }).catch(() => {});
+    await initialPlayback;
+  } catch (_) {
+    clearTimeout(loadTimer);
+    prompt('یہ ویڈیو لوڈ نہیں ہو سکی۔ اپنا کنکشن اور Vimeo کی ایمبیڈنگ اجازت چیک کریں۔', false);
+  }
+}
+void initialise();
+</script>
+</body>
+</html>
